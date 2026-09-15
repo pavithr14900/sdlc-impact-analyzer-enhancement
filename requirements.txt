@@ -1,0 +1,12 @@
+boto3
+Flask
+Flask-Cors
+python-dotenv
+langgraph
+langsmith
+requests
+markdown
+reportlab
+pypdf
+python-docx
+mcp>=1.26,<2

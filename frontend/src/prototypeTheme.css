@@ -1,0 +1,43 @@
+/* Scoped prototype tokens: host application styling must not choose the design. */
+.proto-app-frame.proto-themed {
+  font-family: var(--proto-fontFamily);
+  font-size: var(--proto-fontSize);
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: var(--proto-text);
+  background: var(--proto-background);
+  border: var(--proto-borderWidth) solid var(--proto-border);
+  border-radius: var(--proto-radius);
+  box-shadow: none;
+  color-scheme: light;
+}
+.proto-themed * { box-sizing: border-box; }
+.proto-themed :is(h2, h3, p, button, input, select, textarea, table, label, li, span) { font-family: inherit; letter-spacing: normal; }
+.proto-themed .proto-app-header { background: var(--proto-headerBackground); color: var(--proto-headerText); padding: var(--proto-spacing); }
+.proto-themed .proto-app-title { font-size: var(--proto-headingSize); }
+.proto-themed .proto-app-sidebar { background: var(--proto-surface); border-color: var(--proto-border); padding: var(--proto-spacing); }
+.proto-themed .proto-app-main { padding: var(--proto-spacing); max-width: var(--proto-contentWidth); min-width: 0; width: 100%; margin-inline: auto; }
+.proto-themed :is(.proto-nav-item, .proto-tab) { font-size: inherit; color: var(--proto-text); border-radius: var(--proto-radius); }
+.proto-themed :is(.proto-nav-item.active, .proto-tab.active) { background: var(--proto-primary); color: var(--proto-primaryText); }
+.proto-themed :is(.proto-page-title, .proto-subheading) { color: var(--proto-text); font-size: var(--proto-headingSize); }
+.proto-themed :is(.proto-page-description, .proto-stat-label) { color: var(--proto-muted); font-size: inherit; }
+.proto-themed .proto-ordered-components { display: flex; flex-direction: column; align-items: stretch; gap: var(--proto-spacing); margin-top: var(--proto-spacing); }
+.proto-themed :is(.proto-text, .proto-field, .proto-list, .proto-table) { color: var(--proto-text); font-size: inherit; }
+.proto-themed .proto-field { gap: calc(var(--proto-spacing) / 2); }
+.proto-themed :is(input, select, textarea) { font-size: inherit; line-height: inherit; color: var(--proto-text); background: var(--proto-surface); border: var(--proto-borderWidth) solid var(--proto-border); border-radius: var(--proto-radius); padding: calc(var(--proto-spacing) / 2); }
+.proto-themed .proto-button { align-self: flex-start; font-size: inherit; line-height: inherit; padding: calc(var(--proto-spacing) / 2) var(--proto-spacing); border: var(--proto-borderWidth) solid var(--proto-border); border-radius: var(--proto-radius); background: var(--proto-surface); color: var(--proto-text); }
+.proto-themed .proto-button.primary { background: var(--proto-primary); border-color: var(--proto-primary); color: var(--proto-primaryText); }
+.proto-themed :is(.proto-stat-card, .proto-alert) { background: var(--proto-surface); color: var(--proto-text); border: var(--proto-borderWidth) solid var(--proto-border); border-radius: var(--proto-radius); padding: var(--proto-spacing); box-shadow: none; }
+.proto-themed .proto-stat-value { color: var(--proto-text); font-size: var(--proto-headingSize); }
+.proto-themed :is(.proto-table-wrapper, .proto-table th, .proto-table td) { border-color: var(--proto-border); border-radius: var(--proto-radius); font-size: inherit; color: var(--proto-text); }
+.proto-themed .proto-table th { background: var(--proto-surface); }
+.proto-themed .proto-table :is(th, td) { padding: calc(var(--proto-spacing) / 2); }
+.proto-themed :focus-visible { outline: 3px solid var(--proto-focus); outline-offset: 2px; }
+.proto-themed.proto-layout-topnav .proto-app-body,
+.proto-themed.proto-layout-stacked .proto-app-body { flex-direction: column; }
+.proto-themed.proto-layout-topnav .proto-app-sidebar { flex-direction: row; flex-wrap: wrap; width: 100%; border-right: 0; border-bottom: var(--proto-borderWidth) solid var(--proto-border); }
+.proto-themed.proto-layout-stacked .proto-app-sidebar { width: 100%; border-right: 0; }
+.proto-themed.proto-app-mobile .proto-app-body { flex-direction: column; }
+.proto-themed.proto-app-mobile .proto-app-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
+.proto-themed.proto-app-mobile .proto-app-sidebar span { display: inline; }
+.prototype-design-notes { padding: 12px 16px; font-size: 13px; }
