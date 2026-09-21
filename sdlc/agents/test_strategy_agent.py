@@ -132,6 +132,75 @@ def _write_test_files(content: str) -> list[str]:
     return written
 
 
+def _write_test_files_with_fallback(content: str) -> list[str]:
+    """Write files using the strict FILE_MARKER first, then fall back to
+    extracting fenced code blocks and inferring Java package/class paths.
+    This makes the generator tolerant to LLM output that doesn't include the
+    required "#### FILE:" markers exactly as requested.
+    """
+
+    written = _write_test_files(content)
+
+    if written:
+        return written
+
+    # Fallback: find all fenced code blocks
+    fence_re = re.compile(r"```(?:[^\n]*)\n(.*?)```", re.DOTALL)
+    idx = 0
+
+    for block in fence_re.findall(content):
+        code = block.strip()
+        if not code:
+            continue
+
+        # Try to infer package and class name for Java sources
+        pkg = None
+        cls = None
+        for line in code.splitlines():
+            line = line.strip()
+            if line.startswith("package ") and line.endswith(";"):
+                pkg = line[len("package "):-1].strip()
+            m = re.match(r"public\s+class\s+(\w+)", line)
+            if m:
+                cls = m.group(1)
+                break
+            m2 = re.match(r"class\s+(\w+)", line)
+            if m2:
+                cls = m2.group(1)
+                break
+
+        # Decide base path depending on test type (unit vs e2e)
+        if cls and cls.endswith("E2ETest"):
+            base = os.path.join(output_dir, "selenium-tests", "src", "test", "java")
+            filename = f"{cls}.java"
+        elif cls and cls.endswith("Test"):
+            base = os.path.join(output_dir, "backend", "src", "test", "java")
+            filename = f"{cls}.java"
+        else:
+            # Generic fallback filename
+            base = os.path.join(output_dir, "backend", "src", "test", "java")
+            idx += 1
+            filename = f"GeneratedTest{idx}.java"
+
+        if pkg:
+            pkg_path = pkg.replace('.', '/')
+            full_dir = os.path.join(base, pkg_path)
+        else:
+            full_dir = base
+
+        try:
+            os.makedirs(full_dir, exist_ok=True)
+            full_path = os.path.join(full_dir, filename)
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(code + "\n")
+            rel_path = os.path.relpath(full_path, output_dir).replace('\\', '/')
+            written.append(rel_path)
+        except OSError:
+            continue
+
+    return written
+
+
 def test_strategy_agent(state: SdlcState) -> dict:
 
     content = call_llm(
@@ -159,6 +228,18 @@ def test_strategy_agent(state: SdlcState) -> dict:
                         rel = os.path.relpath(os.path.join(root, f), backend_src).replace("\\", "/")
                         java_classes.append(rel)
 
+        # Formatted once and reused by both branches below - previously the
+        # per-class branch concatenated this template unformatted, sending
+        # literal "{requirement}"-style placeholders to the LLM and breaking
+        # the "#### FILE:" output contract so no test files were written.
+        formatted_test_code_prompt = TEST_CODE_PROMPT.format(
+            requirement=state["requirement"],
+            test_strategy=content,
+            api_design=state.get("api_design", ""),
+            data_model=state.get("data_model", ""),
+            coding_standards=coding_standards_context(state["requirement"])
+        )
+
         if java_classes:
             # Build a tailored prompt listing classes and requesting one unit test
             # per class under backend/src/test/java with matching package paths.
@@ -182,24 +263,21 @@ Additionally, produce a Selenium end-to-end test as before for the primary user 
 """.format(classes=classes_list_text)
 
             test_code = call_llm(
-                dynamic_prompt + "\n\n" + TEST_CODE_PROMPT,  # append original guidance for e2e test
+                dynamic_prompt + "\n\n" + formatted_test_code_prompt,  # append original guidance for e2e test
                 system=system_prompt(ROLE),
                 max_tokens=9000
             )
         else:
             test_code = call_llm(
-                TEST_CODE_PROMPT.format(
-                    requirement=state["requirement"],
-                    test_strategy=content,
-                    api_design=state.get("api_design", ""),
-                    data_model=state.get("data_model", ""),
-                    coding_standards=coding_standards_context(state["requirement"])
-                ),
+                formatted_test_code_prompt,
                 system=system_prompt(ROLE),
                 max_tokens=6000
             )
 
         written_files = _write_test_files(test_code)
+        if not written_files:
+            # Try a tolerant fallback that extracts fenced blocks and infers paths
+            written_files = _write_test_files_with_fallback(test_code)
     except OSError:
         written_files = []
 

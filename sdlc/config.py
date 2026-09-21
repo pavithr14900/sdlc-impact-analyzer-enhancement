@@ -14,6 +14,22 @@ REGION = os.getenv("AWS_REGION", "eu-west-2")
 
 MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "amazon.nova-lite-v1:0")
 
+# Runtime-overridable model id. Use `get_model_id()` / `set_model_id()` to
+# read or change the active model at runtime (allows the frontend to switch
+# models without restarting the server).
+_RUNTIME_MODEL_ID = MODEL_ID
+
+
+def get_model_id() -> str:
+    """Return the currently active model id."""
+    return _RUNTIME_MODEL_ID
+
+
+def set_model_id(model_id: str) -> None:
+    """Set the currently active model id at runtime."""
+    global _RUNTIME_MODEL_ID
+    _RUNTIME_MODEL_ID = str(model_id)
+
 OUTPUT_DIR = os.getenv("SDLC_OUTPUT_DIR", "generated")
 
 # LangSmith reads these from the environment itself, so just make sure

@@ -20,6 +20,7 @@ from sdlc.config import (
     REQUIREMENT_OUTPUT_FILE,
     ensure_output_dir,
 )
+from sdlc.config import get_model_id, set_model_id
 from sdlc.graphs import (
     WORKFLOWS,
     run_change_impact_workflow,
@@ -736,6 +737,38 @@ def api_workflows():
             for name, graph in WORKFLOWS.items()
         }
     })
+
+
+@app.route("/api/models", methods=["GET"])
+def api_models():
+    """List available model options for the UI selector."""
+    models = [
+        {"id": "amazon.nova-lite-v1:0", "label": "Amazon Nova Lite v1"},
+        {"id": "eu.anthropic.claude-haiku-4-5-20251001-v1:0", "label": "Claude Haiku 4.5"},
+    ]
+    return jsonify({"success": True, "models": models})
+
+
+@app.route("/api/model", methods=["GET", "POST"])
+def api_model():
+    """Get or set the active model id used for LLM calls at runtime.
+
+    GET returns the current model id. POST accepts JSON {"model_id": "..."}
+    and updates the runtime model.
+    """
+    if request.method == "GET":
+        return jsonify({"success": True, "model_id": get_model_id()})
+
+    data = request.get_json(silent=True) or {}
+    model_id = str(data.get("model_id", "")).strip()
+    if not model_id:
+        return jsonify({"success": False, "error": "model_id is required."}), 400
+
+    try:
+        set_model_id(model_id)
+        return jsonify({"success": True, "model_id": get_model_id()})
+    except Exception as exc:
+        return _failure("Failed to set model", exc)
 
 
 @app.route("/api/mcp/discover", methods=["GET"])

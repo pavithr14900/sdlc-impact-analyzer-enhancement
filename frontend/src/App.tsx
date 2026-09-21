@@ -128,6 +128,8 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [models, setModels] = useState<{ id: string; label: string }[]>([]);
+  const [activeModelId, setActiveModelId] = useState<string>("");
   const outputPanelRef = useRef<HTMLElement>(null);
   const [interactiveStageIndex, setInteractiveStageIndex] = useState(0);
   const [activeStagesSequence, setActiveStagesSequence] = useState<string[]>([]);
@@ -264,6 +266,23 @@ function App() {
 
   useEffect(() => {
     checkBackendHealth();
+    // fetch available models and current selection
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/models`);
+        if (res.ok) {
+          const data = await res.json();
+          setModels(data.models || []);
+        }
+        const cur = await fetch(`${API_BASE_URL}/model`);
+        if (cur.ok) {
+          const d = await cur.json();
+          setActiveModelId(d.model_id || "");
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
     const interval = setInterval(checkBackendHealth, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -796,11 +815,33 @@ function App() {
           </div>
 
           <div className="engine-model">
-            Amazon Nova Lite
+            <label style={{display: 'block', fontWeight: 700, fontSize: 12, marginBottom: 6}}>Model</label>
+            <select
+              value={activeModelId}
+              onChange={async (e) => {
+                const id = e.target.value;
+                setActiveModelId(id);
+                try {
+                  await fetch(`${API_BASE_URL}/model`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id: id })
+                  });
+                } catch {
+                  // ignore
+                }
+              }}
+              style={{width: '100%'}}
+            >
+              <option value="">Select model...</option>
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="engine-region">
-            AWS eu-west-2
+            {activeModelId.includes('nova') ? 'AWS eu-west-2' : 'Claude'}
           </div>
         </div>
 
@@ -958,8 +999,13 @@ function App() {
               <span>/</span>
               {activeCapability === "change-impact" ? "CHANGE IMPACT" : "APPLICATION BUILDER"}
             </div>
-
-            {/* Title & subtitle shown in the workspace header to avoid duplication */}
+            <div className="topbar-heading-row">
+              <div>
+                <h1>{activeCapability === "change-impact" ? "Change intelligence" : "Build your next application"}</h1>
+                <p>{activeCapability === "change-impact" ? "Trace downstream dependencies before the first line of code changes." : "From business intent to a developer-ready implementation pack."}</p>
+              </div>
+              
+            </div>
           </div>
 
           <div className="topbar-actions">
@@ -1066,6 +1112,7 @@ function App() {
         <section className={`${!result && !loading ? "workspace home-workspace" : "workspace"} ${activeCapability === "change-impact" ? "change-impact-workspace" : ""}`}>
           <div className="workspace-header">
             <div>
+              <div className="workspace-kicker">{activeCapability === "change-impact" ? "RISK & DEPENDENCY REVIEW" : "INTELLIGENT DELIVERY WORKSPACE"}</div>
               <div className="workspace-heading-icon" aria-hidden="true">
                 {activeCapability === "change-impact" ? <ArrowRightLeft /> : <FileCog />}
               </div>
@@ -1079,6 +1126,13 @@ function App() {
               <Lightbulb aria-hidden="true" />
               <span>Describe clearly for better results</span>
             </div>
+
+            {!result && !loading && (
+              <div className="workspace-metrics" aria-label="Workspace capabilities">
+                <span><strong>12</strong> delivery stages</span>
+                <span><strong>AI</strong> guided review</span>
+              </div>
+            )}
 
             <button
               className="clear-btn"

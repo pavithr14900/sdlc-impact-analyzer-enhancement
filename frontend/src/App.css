@@ -462,6 +462,41 @@
   width: 100%;
 }
 
+.topbar-heading-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.workspace-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #e4e7ee;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.78);
+  color: #59657a;
+  font-size: 11px;
+  font-weight: 750;
+  box-shadow: 0 4px 14px rgba(42, 51, 76, 0.05);
+}
+
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #df6262;
+  box-shadow: 0 0 0 3px rgba(223, 98, 98, 0.12);
+}
+
+.health-dot.online {
+  background: #36c98f;
+  box-shadow: 0 0 0 3px rgba(54, 201, 143, 0.12);
+}
+
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -684,6 +719,37 @@
   gap: 20px;
 
   margin-bottom: 18px;
+}
+
+.workspace-kicker {
+  margin-bottom: 10px;
+  color: #7567dd;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.25px;
+}
+
+.workspace-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  align-self: flex-end;
+  color: #788398;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.workspace-metrics span {
+  padding: 9px 11px;
+  border: 1px solid #e4e7ee;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.7);
+}
+
+.workspace-metrics strong {
+  color: #353c52;
+  font-size: 12px;
 }
 
 .eyebrow {
@@ -3934,6 +4000,40 @@
   transition: width 0.2s ease;
 }
 
+.proto-browser-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #ece9f7;
+  border-bottom: 1px solid #e0ddf3;
+}
+
+.proto-chrome-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.proto-chrome-dot-red { background: #ef5350; }
+.proto-chrome-dot-amber { background: #f4b400; }
+.proto-chrome-dot-green { background: #34a853; }
+
+.proto-chrome-url {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #6f7a92;
+  background: #ffffff;
+  border: 1px solid #e0ddf3;
+  border-radius: 999px;
+  padding: 3px 12px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .proto-app-header {
   display: flex;
   align-items: center;
@@ -3944,6 +4044,9 @@
 }
 
 .proto-app-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.2px;
@@ -4275,6 +4378,16 @@ table.proto-table td {
   font-style: italic;
 }
 
+.proto-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0;
+  color: #98a3b3;
+  font-style: normal;
+}
+
 .proto-list {
   margin: 0 0 16px;
   padding: 0;
@@ -4288,6 +4401,15 @@ table.proto-table td {
   align-items: center;
   gap: 6px;
   padding: 3px 0;
+}
+
+@keyframes protoFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.proto-screen-body {
+  animation: protoFadeIn 0.25s ease;
 }
 
 .proto-text {

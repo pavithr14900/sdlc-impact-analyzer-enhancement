@@ -1277,7 +1277,7 @@ function Section({
                   className="section-action section-action-primary"
                   onClick={onNext}
                 >
-                  Next
+                  {section.title.toLowerCase().includes("documentation") ? "Show all sections" : "Next"}
                 </button>
               </div>
             </div>
@@ -1397,40 +1397,60 @@ export default function SdlcOutput({
     <div className="sdlc-output">
       <div ref={topRef} />
       <div className="sdlc-sections">
-        {sections.map((section, index) => (
-          <div
-            key={`${section.id}-${content.length}`}
-            ref={section.id === focusSectionId ? activeSectionRef : undefined}
-            tabIndex={-1}
-          >
-            <Section
-              section={section}
-              open={openSectionIds.has(section.id)}
-              onToggle={() => setOpenSectionIds((current) => {
-                const next = new Set(current);
-                if (next.has(section.id)) {
-                  next.delete(section.id);
-                } else {
-                  next.add(section.id);
-                }
-                return next;
-              })}
-              onCorrection={index === sections.length - 1 && !onNext ? onCorrection : undefined}
-              onApprove={index === sections.length - 1 && !onNext ? onApprove : undefined}
-              diagramXml={diagramXml}
-              onNext={index === sections.length - 1 && onNext
-                ? onNext
-                : !onApprove && AUTO_NAV_SECTION_IDS.has(section.id) && sections[index + 1]
-                  ? () => {
-                    const nextSection = sections[index + 1];
-                    setOpenSectionIds(new Set([nextSection.id]));
-                    setFocusSectionId(nextSection.id);
+        {sections.map((section, index) => {
+          const sectionOnApprove = section.id === activeSectionId && onApprove ? onApprove : undefined;
+          const sectionOnCorrection = section.id === activeSectionId && onCorrection ? onCorrection : undefined;
+
+          return (
+            <div
+              key={`${section.id}-${content.length}`}
+              ref={section.id === focusSectionId ? activeSectionRef : undefined}
+              tabIndex={-1}
+            >
+              <Section
+                section={section}
+                open={openSectionIds.has(section.id)}
+                onToggle={() => setOpenSectionIds((current) => {
+                  const next = new Set(current);
+                  if (next.has(section.id)) {
+                    next.delete(section.id);
+                  } else {
+                    next.add(section.id);
                   }
-                  : undefined}
-              fullDocument={content}
-            />
-          </div>
-        ))}
+                  return next;
+                })}
+                onCorrection={sectionOnCorrection}
+                onApprove={sectionOnApprove}
+                diagramXml={diagramXml}
+                onNext={(() => {
+                  const isDocumentation = section.title.toLowerCase().includes("documentation");
+                  if (section.id === activeSectionId && onNext) {
+                    return isDocumentation ? () => {
+                      setOpenSectionIds(new Set());
+                      setFocusSectionId(null);
+                      requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                    } : onNext;
+                  }
+
+                  if (!sectionOnApprove && sections[index + 1]) {
+                    return isDocumentation ? () => {
+                      setOpenSectionIds(new Set());
+                      setFocusSectionId(null);
+                      requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                    } : () => {
+                      const nextSection = sections[index + 1];
+                      setOpenSectionIds(new Set([nextSection.id]));
+                      setFocusSectionId(nextSection.id);
+                    };
+                  }
+
+                  return undefined;
+                })()} 
+                fullDocument={content}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

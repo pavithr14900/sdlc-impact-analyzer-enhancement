@@ -1,18 +1,30 @@
 import "./prototypeTheme.css";
 import { useMemo, useState, type CSSProperties } from "react";
 import {
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  Bell,
   CalendarPlus,
   Check,
   CheckCircle2,
+  Clock,
   ClipboardList,
+  Inbox,
   LayoutDashboard,
   Maximize2,
   Minimize2,
   Monitor,
   PieChart,
+  Plus,
+  Search,
   Smartphone,
+  Sparkles,
   Tablet,
+  TrendingUp,
   UserCheck,
+  Users,
+  Wallet,
   X,
 } from "lucide-react";
 
@@ -57,6 +69,28 @@ function screenIcon(name: string) {
   if (label.includes("approv") || label.includes("manager") || label.includes("review")) return <UserCheck size={17} />;
   if (label.includes("submit") || label.includes("create") || label.includes("new") || label.includes("request")) return <CalendarPlus size={17} />;
   return <ClipboardList size={17} />;
+}
+
+// Stat card labels are also AI-generated free text, so the icon chip is
+// matched by keyword the same way screen icons are.
+function statIcon(label: string) {
+  const value = label.toLowerCase();
+  if (value.includes("user") || value.includes("customer") || value.includes("employee") || value.includes("member")) return <Users size={16} />;
+  if (value.includes("cost") || value.includes("amount") || value.includes("revenue") || value.includes("price") || value.includes("balance") || value.includes("budget")) return <Wallet size={16} />;
+  if (value.includes("pending") || value.includes("wait") || value.includes("time") || value.includes("hour") || value.includes("day")) return <Clock size={16} />;
+  if (value.includes("alert") || value.includes("risk") || value.includes("overdue") || value.includes("issue")) return <AlertTriangle size={16} />;
+  if (value.includes("growth") || value.includes("rate") || value.includes("trend") || value.includes("increase")) return <TrendingUp size={16} />;
+  if (value.includes("approved") || value.includes("complete") || value.includes("active") || value.includes("success")) return <CheckCircle2 size={16} />;
+  return <BarChart3 size={16} />;
+}
+
+// Primary-button copy is also free text, so the leading icon is a best-guess
+// match on the label's intent rather than an exact lookup.
+function buttonIcon(label: string) {
+  const value = label.toLowerCase();
+  if (value.includes("add") || value.includes("create") || value.includes("new")) return <Plus size={14} />;
+  if (value.includes("submit") || value.includes("save") || value.includes("send") || value.includes("continue") || value.includes("next")) return <ArrowRight size={14} />;
+  return <Sparkles size={14} />;
 }
 
 const SAMPLE_PEOPLE = ["Jordan Lee", "Priya Nair", "Sam Carter", "Alex Morgan", "Taylor Reed"];
@@ -178,7 +212,10 @@ function PrototypeTable({
           {visibleRows.length === 0 && (
             <tr>
               <td colSpan={columns.length + (showActions ? 1 : 0)} className="proto-table-empty">
-                No matching records.
+                <div className="proto-empty-state">
+                  <Inbox size={22} />
+                  <span>No matching records.</span>
+                </div>
               </td>
             </tr>
           )}
@@ -188,37 +225,90 @@ function PrototypeTable({
   );
 }
 
-function ScreenBody({ screen }: { screen: PrototypeScreen }) {
+// Consecutive "card" components render together as a stat grid instead of
+// one-per-row, matching the richer dashboard summary look.
+function groupComponents(components: PrototypeComponentSpec[]) {
+  const groups: { kind: "cards" | "single"; items: PrototypeComponentSpec[] }[] = [];
+  components.forEach((component) => {
+    const last = groups.at(-1);
+    if (component.type === "card") {
+      if (last?.kind === "cards") {
+        last.items.push(component);
+      } else {
+        groups.push({ kind: "cards", items: [component] });
+      }
+    } else {
+      groups.push({ kind: "single", items: [component] });
+    }
+  });
+  return groups;
+}
+
+function ScreenBody({ screen, screenIndex, totalScreens, appName }: { screen: PrototypeScreen; screenIndex: number; totalScreens: number; appName?: string }) {
   const [submitted, setSubmitted] = useState(false);
+  const groups = useMemo(() => groupComponents(screen.components), [screen.components]);
+  let renderIndex = 0;
+
+  const renderComponent = (component: PrototypeComponentSpec) => {
+    const key = `${component.type}-${renderIndex++}`;
+    switch (component.type) {
+      case "heading": return <h3 className="proto-subheading" key={key}>{component.text}</h3>;
+      case "text": return <p className="proto-text" key={key}>{component.text}</p>;
+      case "card": {
+        const stat = parseStatCard(component.text || "");
+        return (
+          <div className="proto-stat-card" key={key}>
+            {stat ? (
+              <>
+                <span className="proto-stat-icon">{statIcon(stat.label)}</span>
+                <span className="proto-stat-label">{stat.label}</span>
+                <strong className="proto-stat-value">{stat.value}</strong>
+              </>
+            ) : component.text}
+          </div>
+        );
+      }
+      case "field": return <label className="proto-field" key={key}>
+        <span>{component.label}</span>
+        {component.inputType === "select" || component.inputType === "dropdown" ?
+          <select defaultValue=""><option value="" disabled>Select {component.label}</option>{(component.items || []).map(item => <option key={item}>{item}</option>)}</select> :
+          component.inputType === "textarea" ? <textarea rows={3} /> :
+          <input type={["text", "email", "date", "number", "password", "tel", "search", "time", "url"].includes(component.inputType || "") ? component.inputType : "text"} />}
+      </label>;
+      case "button": {
+        const isPrimary = component.variant === "primary";
+        const label = component.label || component.text || "";
+        return (
+          <button key={key} type={isPrimary ? "submit" : "button"} className={`proto-button${isPrimary ? " primary" : ""}`}>
+            {isPrimary && buttonIcon(label)}
+            {label}
+          </button>
+        );
+      }
+      case "table": return <PrototypeTable key={key} component={component} filterStatus={null} showActions={false} />;
+      case "list": return <ul className="proto-list" key={key}>{(component.items || []).map(item => <li key={item}>{item}</li>)}</ul>;
+      case "nav": return <div className="proto-tabs" key={key}>{(component.items || []).map(item => <span className="proto-tab" key={item}>{item}</span>)}</div>;
+      default: return null;
+    }
+  };
+
   return (
     <div className="proto-screen-body">
-      <h2 className="proto-page-title">{screen.name}</h2>
-      {screen.description && <p className="proto-page-description">{screen.description}</p>}
-      {submitted && <div className="proto-alert" role="status"><CheckCircle2 size={16} /> Submitted successfully.</div>}
+      <div className="proto-screen-heading-row">
+        <div>
+          {appName && <div className="proto-breadcrumb">{appName} / {screen.name}</div>}
+          <h2 className="proto-page-title">{screen.name}</h2>
+          {screen.description && <p className="proto-page-description">{screen.description}</p>}
+        </div>
+        <span className="proto-badge proto-badge-neutral">Screen {screenIndex + 1} of {totalScreens}</span>
+      </div>
+      {submitted && <div className="proto-alert proto-alert-success" role="status"><CheckCircle2 size={16} /> Submitted successfully.</div>}
       <form className="proto-ordered-components" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-        {screen.components.map((component, index) => {
-          const key = `${component.type}-${index}`;
-          switch (component.type) {
-            case "heading": return <h3 className="proto-subheading" key={key}>{component.text}</h3>;
-            case "text": return <p className="proto-text" key={key}>{component.text}</p>;
-            case "card": {
-              const stat = parseStatCard(component.text || "");
-              return <div className="proto-stat-card" key={key}>{stat ? <><span>{stat.label}</span><strong className="proto-stat-value">{stat.value}</strong></> : component.text}</div>;
-            }
-            case "field": return <label className="proto-field" key={key}>
-              <span>{component.label}</span>
-              {component.inputType === "select" || component.inputType === "dropdown" ?
-                <select defaultValue=""><option value="" disabled>Select {component.label}</option>{(component.items || []).map(item => <option key={item}>{item}</option>)}</select> :
-                component.inputType === "textarea" ? <textarea rows={3} /> :
-                <input type={["text", "email", "date", "number", "password", "tel", "search", "time", "url"].includes(component.inputType || "") ? component.inputType : "text"} />}
-            </label>;
-            case "button": return <button key={key} type={component.variant === "primary" ? "submit" : "button"} className={`proto-button${component.variant === "primary" ? " primary" : ""}`}>{component.label || component.text}</button>;
-            case "table": return <PrototypeTable key={key} component={component} filterStatus={null} showActions={false} />;
-            case "list": return <ul className="proto-list" key={key}>{(component.items || []).map(item => <li key={item}>{item}</li>)}</ul>;
-            case "nav": return <div className="proto-tabs" key={key}>{(component.items || []).map(item => <span className="proto-tab" key={item}>{item}</span>)}</div>;
-            default: return null;
-          }
-        })}
+        {groups.map((group, groupIndex) =>
+          group.kind === "cards"
+            ? <div className="proto-stat-grid" key={`stat-grid-${groupIndex}`}>{group.items.map(renderComponent)}</div>
+            : renderComponent(group.items[0])
+        )}
       </form>
     </div>
   );
@@ -257,9 +347,24 @@ export default function AppPrototype({ spec }: { spec: AppPrototypeSpec }) {
 
   const shell = (
     <div className={`proto-app-frame proto-themed proto-app-${device} proto-layout-${spec.layout || "sidebar"}`} style={{ ...prototypeThemeStyle(spec.theme), width: DEVICE_WIDTHS[device] }}>
-      <div className="proto-app-header">
-        <span className="proto-app-title">{spec.appName || "Generated Application"}</span>
+      <div className="proto-browser-chrome">
+        <span className="proto-chrome-dot proto-chrome-dot-red" />
+        <span className="proto-chrome-dot proto-chrome-dot-amber" />
+        <span className="proto-chrome-dot proto-chrome-dot-green" />
+        <span className="proto-chrome-url">{(spec.appName || "app").toLowerCase().replace(/\s+/g, "-")}.example.com</span>
+      </div>
 
+      <div className="proto-app-header">
+        <span className="proto-app-title">
+          <Sparkles size={14} />
+          {spec.appName || "Generated Application"}
+        </span>
+
+        <div className="proto-app-header-actions">
+          <button type="button" className="proto-icon-btn" title="Search"><Search size={13} /></button>
+          <button type="button" className="proto-icon-btn" title="Notifications"><Bell size={13} /></button>
+          <span className="proto-app-user"><UserCheck size={13} /> Product Owner</span>
+        </div>
       </div>
 
       <div className="proto-app-body">
@@ -279,7 +384,7 @@ export default function AppPrototype({ spec }: { spec: AppPrototypeSpec }) {
         </nav>
 
         <main className="proto-app-main">
-          {activeScreen && <ScreenBody screen={activeScreen} key={activeScreen.name} />}
+          {activeScreen && <ScreenBody screen={activeScreen} screenIndex={activeIndex} totalScreens={screens.length} appName={spec.appName} key={activeScreen.name} />}
         </main>
       </div>
     </div>
@@ -305,7 +410,6 @@ export default function AppPrototype({ spec }: { spec: AppPrototypeSpec }) {
         </button>
       </div>
 
-      {spec.designNotes && spec.designNotes.length > 0 && <details className="prototype-design-notes"><summary>Applied design guidance</summary><ul>{spec.designNotes.map((note, index) => <li key={index}>{note}</li>)}</ul></details>}
       <div className="app-prototype-viewport">
         {shell}
       </div>

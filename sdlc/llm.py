@@ -7,7 +7,7 @@ from botocore.config import Config
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 
-from sdlc.config import MODEL_ID, REGION
+from sdlc.config import get_model_id, REGION
 
 # Optional: set these in .env to send exact cost with every trace instead of
 # relying on LangSmith's model pricing table (which has no built-in entry
@@ -42,7 +42,7 @@ def call_llm(
 ) -> str:
 
     request = {
-        "modelId": MODEL_ID,
+        "modelId": get_model_id(),
         "messages": [
             {
                 "role": "user",
@@ -94,7 +94,7 @@ def call_llm(
         run_tree.add_metadata({
             "usage_metadata": usage_metadata,
             "ls_provider": "bedrock",
-            "ls_model_name": MODEL_ID,
+            "ls_model_name": get_model_id(),
         })
 
     return response["output"]["message"]["content"][0]["text"].strip()
