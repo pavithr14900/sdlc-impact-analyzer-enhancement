@@ -108,3 +108,17 @@ async def connect(repo_path: str):
                 yield MemorySession(session, schemas)
     except Exception as exc:
         raise McpError(f"Codebase memory MCP connection failed: {error_message(exc)}") from exc
+
+
+def discover() -> dict:
+    """Check whether a local codebase-memory-mcp executable is available and return basic info.
+
+    The UI uses this to show MCP availability. This is intentionally lightweight
+    (does not start the server) to avoid blocking on environments where a
+    desktop/server process is unavailable.
+    """
+    try:
+        cmd = server_command()
+        return {"available": True, "command": cmd}
+    except McpError as exc:
+        return {"available": False, "error": str(exc)}

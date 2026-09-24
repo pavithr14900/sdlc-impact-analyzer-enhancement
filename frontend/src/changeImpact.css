@@ -23,16 +23,16 @@
 }
 
 .change-impact-workspace .workspace-header h2 {
-  margin: 5px 0 4px;
+  margin: 6px 0 4px;
   color: #111936;
-  font-size: 25px;
-  letter-spacing: -0.6px;
+  font-size: 20px;
+  letter-spacing: -0.4px;
 }
 
 .change-impact-workspace .workspace-header p {
   margin: 0;
-  color: #7885a2;
-  font-size: 13px;
+  color: #59697f;
+  font-size: 12px;
 }
 
 .change-impact-workspace .clear-btn,
@@ -57,8 +57,8 @@
 
 .ci-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .ci-step { display: grid; width: 33px; height: 33px; flex: 0 0 auto; place-items: center; border-radius: 9px; background: #eee8ff; color: #6544e6; font-size: 16px; font-weight: 800; }
-.ci-card h3 { margin: 0; color: #121b39; font-size: 17px; font-weight: 800; letter-spacing: -0.25px; text-align: left; }
-.ci-sub, .ci-help, .add-repo > p, .ci-footer-caption { color: #8190ae; font-size: 12px; }
+.ci-card h3 { margin: 0; color: #121b39; font-size: 15px; font-weight: 800; letter-spacing: -0.15px; text-align: left; }
+.ci-sub, .ci-help, .add-repo > p, .ci-footer-caption { color: #6f8597; font-size: 12px; }
 .ci-sub { margin: 4px 0 0; }
 .ci-field-label, .repo-controls label, .add-repo-heading { display: flex; align-items: center; gap: 4px; margin: 0 0 8px; color: #40506e; font-size: 12px; font-weight: 800; }
 .ci-textarea { display: block; width: 100%; min-height: 72px; resize: vertical; border: 1px solid #d5ddea; border-radius: 7px; outline: 0; padding: 11px 12px; color: #34425d; background: #ffffff; font: inherit; font-size: 13px; line-height: 1.45; }
@@ -174,13 +174,13 @@
 .change-impact-workspace .workspace-header p { margin: 0; font-size: 10px; line-height: 1.3; }
 
 .change-impact-workspace .ci-home { gap: 8px; }
-.change-impact-workspace .ci-card { padding: 9px 12px; border-radius: 9px; }
-.change-impact-workspace .ci-card-header { gap: 8px; margin-bottom: 6px; }
+.change-impact-workspace .ci-card { padding: 10px 12px; border-radius: 10px; }
+.change-impact-workspace .ci-card-header { gap: 10px; margin-bottom: 8px; }
 .change-impact-workspace .ci-step { width: 22px; height: 22px; border-radius: 6px; font-size: 12px; }
 .change-impact-workspace .ci-card h3 { font-size: 13px; }
 .change-impact-workspace .ci-sub { display: none; }
 .change-impact-workspace .ci-field-label { margin-bottom: 3px; font-size: 10px; }
-.change-impact-workspace .ci-textarea { min-height: 48px; padding: 7px 9px; font-size: 11px; }
+.change-impact-workspace .ci-textarea { min-height: 56px; padding: 9px 10px; font-size: 13px; }
 .change-impact-workspace .ci-help { margin-top: 3px; font-size: 9px; text-align: left; }
 .change-impact-workspace .repo-source-tabs { margin-bottom: 6px; justify-content: flex-start; }
 .change-impact-workspace .repo-source { min-width: 112px; padding: 5px 10px; font-size: 10px; justify-content: flex-start; }

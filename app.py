@@ -28,6 +28,7 @@ from sdlc.graphs import (
 )
 from sdlc.services import repo_store
 from sdlc.services.change_impact_service import start_job_async, validate_local_path
+from sdlc.legacy_intelligence.routes import legacy_intelligence_bp
 from sdlc.integrations.confluence_client import publish_documentation_to_confluence
 from sdlc.integrations.github_client import commit_generated_code_to_github
 from sdlc.integrations.jira_client import push_user_stories_to_jira
@@ -49,6 +50,7 @@ from sdlc.agents import (
 )
 
 app = Flask(__name__)
+app.register_blueprint(legacy_intelligence_bp)
 
 CORS(
     app,

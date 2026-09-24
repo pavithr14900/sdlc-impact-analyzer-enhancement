@@ -793,13 +793,13 @@ def _inline_markdown_to_reportlab(text: str) -> str:
     return text
 
 
-def _render_documentation_pdf(markdown_text: str, pdf_path: str) -> None:
+def _render_documentation_pdf(markdown_text: str, pdf_path: str, *, wide_tables: bool = False) -> None:
     """Render a Markdown document to a properly formatted PDF using
     ReportLab, with real headings, bullets, tables and code blocks instead
     of a hand-rolled byte-level PDF writer."""
 
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import (
@@ -833,6 +833,7 @@ def _render_documentation_pdf(markdown_text: str, pdf_path: str) -> None:
         name="DocCode", parent=styles["Code"], fontName="Courier", fontSize=9, leading=12
     )
 
+    page_size = landscape(A4) if wide_tables else A4
     story = []
     lines = markdown_text.splitlines()
     index = 0
@@ -843,7 +844,14 @@ def _render_documentation_pdf(markdown_text: str, pdf_path: str) -> None:
     def flush_table():
         if not table_rows:
             return
-        table = Table(table_rows, hAlign="LEFT", repeatRows=1)
+        if wide_tables:
+            columns = max(len(row) for row in table_rows)
+            header_style = ParagraphStyle(name="APIHeader", parent=body_style, fontSize=8.5, leading=12, textColor=colors.white)
+            compact_style = ParagraphStyle(name="APICell", parent=body_style, fontSize=8.5, leading=12, splitLongWords=True)
+            formatted = [[Paragraph(cell.text, header_style if index == 0 else compact_style) for cell in row] + [""] * (columns - len(row)) for index, row in enumerate(table_rows)]
+            table = Table(formatted, colWidths=[(page_size[0] - 40 * mm) / columns] * columns, hAlign="LEFT", repeatRows=1)
+        else:
+            table = Table(table_rows, hAlign="LEFT", repeatRows=1)
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2c3e50")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -943,7 +951,7 @@ def _render_documentation_pdf(markdown_text: str, pdf_path: str) -> None:
     flush_code()
 
     document = SimpleDocTemplate(
-        pdf_path, pagesize=A4,
+        pdf_path, pagesize=page_size,
         leftMargin=20 * mm, rightMargin=20 * mm, topMargin=18 * mm, bottomMargin=18 * mm,
         title=os.path.basename(pdf_path)
     )

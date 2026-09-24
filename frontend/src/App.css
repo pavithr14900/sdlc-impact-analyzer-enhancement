@@ -1206,7 +1206,7 @@
 
   width: 100%;
 
-  min-height: 120px;
+  min-height: 200px;
 
   resize: none;
 
@@ -5379,7 +5379,7 @@ table.proto-table td {
 }
 
 .input-panel textarea {
-  min-height: 120px;
+  min-height: 200px;
   padding: 16px;
 }
 
@@ -7637,6 +7637,41 @@ table.proto-table td {
 .polished-ui .clear-input-btn:hover { color: #b3384e; border-color: #e5b9c1; background: #fff8f9; }
 .polished-ui .execute-btn { background: #7048ec; color: #fff; border: 1px solid #7048ec; }
 .polished-ui .execute-btn:disabled { background: #ede7fc; border-color: #e2d8fa; color: #84719d; opacity: 1; cursor: not-allowed; box-shadow: none; }
+/* Unified primary action styling for requirement, legacy, and change-impact pages */
+.primary-action,
+.polished-ui .execute-btn,
+.li-primary,
+.ci-source-link,
+.ci-component-filters button,
+.ci-card-actions button,
+.workspace-history-button,
+.proto-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #7048ec;
+  color: #fff;
+  border: 1px solid #7048ec;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary-action:disabled,
+.polished-ui .execute-btn:disabled,
+.li-primary:disabled,
+.ci-source-link:disabled,
+.ci-component-filters button:disabled,
+.ci-card-actions button:disabled {
+  background: #ede7fc;
+  border-color: #e2d8fa;
+  color: #84719d;
+  cursor: not-allowed;
+  opacity: 1;
+}
 /* Consistent, scalable icon tiles with restrained depth. */
 .polished-ui .capability-overview-icon,
 .polished-ui .example-chip-icon,

@@ -207,7 +207,7 @@ export default function ChangeImpactResults({ result, data, onPreview, onDownloa
       </> : <section className="ci-insight-card ci-legacy-report">
         <div className="ci-insight-heading"><ClipboardList /><h3>Report details</h3></div>
         <p className="ci-legacy-note">Expand a section to review the findings. Run a new analysis for the concise summary view.</p>
-        {sections.map((section, index) => <details key={index} open={index === 0}>
+        {sections.map((section, index) => <details key={index} open={false}>
           <summary>{section.title}<ChevronDown size={16} /></summary>
           <div className="ci-report"><ReactMarkdown remarkPlugins={markdownPlugins}>{section.body}</ReactMarkdown></div>
         </details>)}

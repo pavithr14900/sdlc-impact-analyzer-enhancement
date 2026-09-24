@@ -1,8 +1,9 @@
 ﻿# SDLC Application Builder and Change Impact Analyzer
 
-This application supports two workflows through a React frontend and Flask backend, with Amazon Bedrock generating the analysis and implementation content:
+This application supports three capabilities through a React frontend and Flask backend, with Amazon Bedrock generating analysis and implementation content:
 
 - **Application Builder** turns a business requirement into Software Development Life Cycle (SDLC) deliverables, from requirement analysis through code, tests, infrastructure and documentation.
+- **Legacy Code Intelligence** analyzes one or more existing repositories, saves code findings and architecture, and provides evidence-backed documentation, candidate business rules, application flows, and questions about the codebase. See the [Legacy Code Intelligence guide](docs/legacy-code-intelligence.md) for API contracts, operation, and limitations.
 - **Change Impact** analyzes an existing repository using codebase memory to identify affected components and recommend implementation and testing work.
 
 ## SDLC Application Builder
@@ -201,3 +202,181 @@ npm run build
 ```
 
 Retrieval is bounded to eight extracted search terms, up to six candidate functions per repository and dependency paths up to three hops. It is an assessment of retrieved evidence, not proof that every affected file was found. Search limits, missing matches, partial indexing and truncated model context are reported explicitly. Risk severity is assessed by the model; call distance alone is not treated as a risk score.
+
+## Legacy Code Intelligence
+
+Legacy Code Intelligence is the repository-understanding workspace between Application Builder and Change Impact. It indexes one or more existing repositories, stores a time-stamped analysis, and presents evidence-backed findings that can be reviewed before they are used as requirements or implementation guidance.
+
+### Workflow
+
+1. Open **Legacy Code Intelligence** from the sidebar or navigate to `/#/legacy-intelligence`.
+2. Select **Git Repository**, **Local Folder**, or **Multiple Repositories**. Multiple repositories are analyzed together while repository identity is retained in evidence and graph relationships.
+3. For a local source, provide an absolute path on the backend machine or use **Browse folder** when the Flask process has a desktop session. A browser machine's filesystem is not automatically visible to a remote backend.
+4. Select **Analyze Codebase**. Analysis runs in the background and the page polls the saved progress record. You can navigate away and reopen it from **Recent Analyses**.
+5. Review **Application Overview**, **System Architecture**, business rules, flows, documentation, and source evidence. Unknown counts and missing relationships mean unavailable coverage, not proof that no such items exist.
+6. Use Quick Actions for documentation, architecture details, candidate business rules, application flows, chat, or Change Impact.
+7. Start a new analysis after source changes. A saved analysis describes the repository at analysis time and later edits can invalidate file and line references.
+
+The analysis states are `NOT_STARTED`, `SCANNING`, `INDEXING`, `ANALYZING`, `COMPLETED`, and `FAILED`. Progress includes `step`, `totalSteps`, `message`, and `percent`. Candidate business rules are evidence-backed hypotheses and retain LOW confidence until a domain expert reviews them.
+
+### Legacy analysis API
+
+All paths in this section start with `/api/legacy-intelligence`. Successful responses contain `success: true`; validation and processing errors contain `success: false` and an `error` message.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/analyze` | Start a background repository analysis. Returns HTTP 202 and an `analysis` object. |
+| `GET` | `/recent` | List saved analysis summaries in `analyses`. |
+| `GET` | `/{analysisId}` | Read the saved analysis, progress, findings, and limitations. |
+| `DELETE` | `/{analysisId}` | Delete a saved analysis, including a running snapshot. |
+| `GET` | `/{analysisId}/overview` | Read repository and discovered-code counts. |
+| `GET` | `/{analysisId}/architecture` | Read architecture nodes and edges. |
+| `GET` | `/{analysisId}/business-rules` | Read evidence-backed candidate business rules. |
+| `GET` | `/{analysisId}/flows` | Read application-flow graphs. |
+| `POST` | `/{analysisId}/documentation` | Generate selected evidence-backed documents. |
+| `GET` | `/{analysisId}/documentation/pdf?type=all` | Download all generated PDFs as a ZIP, or one PDF for a selected type. |
+| `POST` | `/chat` | Ask a question about one saved analysis and receive supporting evidence. |
+
+Example analysis request:
+
+```json
+{
+  "repositories": [
+    {"type": "local", "path": "C:\\projects\\patient-service"},
+    {"type": "git", "url": "https://github.com/your-org/notification-service.git", "branch": "main"}
+  ]
+}
+```
+
+Example chat request:
+
+```json
+{
+  "analysisId": "<saved-analysis-id>",
+  "question": "What scheduled jobs exist?"
+}
+```
+
+Example documentation request:
+
+```json
+{
+  "types": [
+    "application_overview",
+    "system_architecture",
+    "api_documentation",
+    "business_rules"
+  ]
+}
+```
+
+Supported documentation selections also include component documentation, database documentation, service dependencies, external integrations, scheduled jobs, application flows, security overview, and technical debt. Unsupported conclusions must remain visible as coverage gaps.
+
+### Evidence and analysis boundaries
+
+- Counts and graph relationships come from code/index facts; model output interprets retrieved evidence.
+- Evidence references include repository, file, symbol, line range, and available source excerpts.
+- Chat ranks saved evidence against the question and validates returned citation IDs. Missing matches or invalid citations produce an explicit evidence-only response.
+- Application-flow graphs use direct MCP call edges resolved by LSP or language rules. They do not infer execution order, complete runtime workflows, or all cross-repository interactions.
+- Counts are bounded discoveries rather than an exhaustive inventory. Unavailable categories are returned as `null`.
+- Services are named source components and external systems are URL references.
+- Git checkouts reuse the existing Change Impact clone cache and are not automatically pulled. Parent-folder discovery is not implemented.
+- Deleting an analysis stops further persistence. Work already executing in MCP or Bedrock may finish, but it will not recreate the deleted analysis.
+- The current persistence model assumes one backend process.
+
+### Legacy documentation and Confluence
+
+Documentation generation makes a dedicated technical-writing model call for each selected document type. Each draft receives bounded source evidence and document-specific coverage instructions. Draft structure and citation IDs are checked, but those checks do not prove every claim; review is still required.
+
+Saved documentation records the content revision, generation mode, and model. PDF downloads use the saved content without another model call and include a cover, headers, page numbers, source references, and coverage limitations. If authoring fails, the UI labels the source-summary fallback.
+
+To publish reviewed documents to Confluence Cloud, configure the variables below and restart Flask:
+
+```dotenv
+CONFLUENCE_BASE_URL=https://your-team.atlassian.net
+CONFLUENCE_EMAIL=your-account-email
+CONFLUENCE_API_TOKEN=your-api-token
+CONFLUENCE_SPACE_KEY=ENG
+CONFLUENCE_PARENT_PAGE_ID=
+```
+
+Publishing is explicit: expand **Publish to Confluence**, select documents, verify the displayed site/space/parent, and click **Publish**. Publishing again updates matching pages for the same analysis. The backend rejects a stale reviewed revision before publishing. A network timeout can leave the outcome uncertain; retry looks up the analysis-specific page before creating it. Confluence Data Center is not covered.
+
+## Complete API inventory
+
+The following routes are also available in addition to the workflow-specific routes above:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Return service, LangGraph, model, and region health information. |
+| `GET` | `/api/workflows` | Return compiled workflow agent names and Mermaid graphs. |
+| `GET` | `/api/models` | List model choices shown in the UI. |
+| `GET`, `POST` | `/api/model` | Read or change the active runtime model using `{ "model_id": "..." }`. |
+| `GET` | `/api/mcp/discover` | Discover MCP capabilities; failures return HTTP 502. |
+| `GET`, `POST` | `/api/workspaces` | List or create repository workspaces. |
+| `GET`, `POST` | `/api/workspaces/{id}/repos` | List or add repositories to a workspace. |
+| `POST` | `/api/change-impact` | Backwards-compatible synchronous Change Impact request. |
+| `POST` | `/api/change-impact/start` | Start a workspace/repository-based asynchronous impact job. |
+| `POST` | `/api/change-impact/start-simple` | Start an asynchronous job with one inline repository specification. |
+| `GET` | `/api/change-impact/status?job_id=...` | Read job status and errors. |
+| `GET` | `/api/change-impact/result?job_id=...` | Read the complete saved job result. |
+| `POST` | `/api/pick-folder` | Open a native folder picker on the backend host. |
+| `POST` | `/api/upload-repo` | Upload and safely extract a `.zip` repository. |
+| `GET`, `DELETE` | `/api/knowledge-base` | Read or clear the engineering guidance knowledge base. |
+| `POST` | `/api/knowledge-base/upload` | Upload `.txt`, `.md`, or `.pdf` engineering guidance. |
+| `POST` | `/api/architecture-diagram` | Generate and save a draw.io architecture diagram. |
+| `GET` | `/api/architecture-diagram/download` | Download the saved draw.io XML. |
+| `GET` | `/api/generated-code/tree` | List generated files, optionally under a `prefix`. |
+| `GET` | `/api/generated-code/file?path=...` | Read one generated text file with its language. |
+| `GET`, `POST` | `/api/documentation/pdf` | Preview/download or generate a documentation PDF. |
+| `POST` | `/api/integrations/jira/push-stories` | Push generated user stories to Jira. |
+| `POST` | `/api/integrations/confluence/publish-docs` | Publish generated documentation to Confluence. |
+| `POST` | `/api/integrations/github/commit-code` | Commit generated code to the configured GitHub repository. |
+
+## Repository structure
+
+```text
+app.py                         Flask application and route registration
+requirements.txt               Python runtime dependencies
+sdlc/                          LangGraph agents, services, integrations, and state
+sdlc/legacy_intelligence/      Legacy analysis API, persistence, evidence, and documents
+frontend/src/                  React, TypeScript, workflow views, and shared workspace shell
+data/                          Local repository clones, uploads, and SQLite-backed runtime data
+generated/                     Generated packs, source code, diagrams, and documentation
+scripts/                       Inspection, smoke, export, and UI verification utilities
+tests/                         Offline regression tests and the legacy repository fixture
+docs/                          Focused feature documentation
+```
+
+## Persistence, security, and operational notes
+
+- The default Legacy Intelligence database is `data/legacy_intelligence.db`; interrupted work is marked failed.
+- Uploaded repositories are extracted under `CHANGE_IMPACT_REPOS` or `data/repos`. ZIP extraction rejects path traversal entries.
+- Local repository paths are validated before asynchronous analysis. They must exist on the backend machine.
+- Generated-file and documentation routes normalize and constrain paths to their configured output directories.
+- CORS currently allows all origins for `/api/*`; put the service behind an appropriately restricted gateway for production use.
+- Keep AWS, Jira, Confluence, GitHub, and LangSmith credentials in backend environment configuration. Do not commit `.env` or tokens.
+- Repository contents, uploaded guidance, and user questions are treated as data. They are retrieved as evidence and are not trusted as agent instructions.
+- MCP indexing uses `persistence=false`, so graph artifacts are not written into the selected source repository. Index storage follows the server's cache configuration.
+
+## Verification matrix
+
+Run these commands from the repository root after installing dependencies:
+
+```powershell
+# Python regression suites
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_change_impact_memory.py -v
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_impact_report.py -v
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_legacy_intelligence.py -v
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_legacy_chat.py -v
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_document_pack.py -v
+
+# Type/build and MCP inspection
+.venv\Scripts\python.exe scripts/inspect_memory.py
+.venv\Scripts\python.exe scripts/inspect_memory.py --collect
+cd frontend
+npm run build
+npm run lint
+```
+
+For a real legacy lifecycle, start the backend and run `scripts/smoke_legacy_intelligence.py`. Add `--adapter-only` to exercise indexing, search, and tracing without model calls. Use `--base-url http://127.0.0.1:5001/api` when the backend is running on another port. The UI scripts require Playwright and Microsoft Edge; they are not part of the backend unit-test suite.

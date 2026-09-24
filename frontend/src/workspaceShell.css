@@ -1,0 +1,99 @@
+/* One shell for every capability. Keep feature styles inside their workspaces. */
+#root:has(.app-shell.polished-ui) { border: 0; }
+.app-shell.polished-ui { --shell-sidebar: 260px; --shell-gutter: 24px; min-height: 100dvh; }
+.app-shell.polished-ui .sidebar {
+  width: var(--shell-sidebar); padding: 20px 14px 16px; gap: 0;
+  background: #111927; overflow-y: auto; border-right: 1px solid #253044;
+}
+.app-shell.polished-ui .sidebar .brand { flex-shrink: 0; gap: 12px; padding: 0 6px 20px; }
+.app-shell.polished-ui .sidebar .brand-icon { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 11px; font-size: 17px; }
+.app-shell.polished-ui .sidebar .brand-title { font-size: 18px; line-height: 26px; }
+.app-shell.polished-ui .sidebar .brand-subtitle { margin-top: 2px; font-size: 11px; line-height: 18px; }
+.app-shell.polished-ui .sidebar .sidebar-top-actions { flex-shrink: 0; padding: 0; gap: 14px; }
+.app-shell.polished-ui .sidebar .new-build-btn { height: 44px; min-height: 44px; margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; box-shadow: none; }
+.app-shell.polished-ui .sidebar .sidebar-section-label { margin: 8px 10px 0; font-size: 10px; line-height: 16px; }
+.app-shell.polished-ui .sidebar .sidebar-capabilities { gap: 4px; }
+.app-shell.polished-ui .sidebar .sidebar-capability {
+  height: 78px; min-height: 78px; gap: 10px; padding: 10px; border: 1px solid transparent;
+  border-radius: 10px; box-shadow: none; transition: background-color 120ms ease, color 120ms ease;
+}
+.app-shell.polished-ui .sidebar .sidebar-capability.active { border-color: #33425b; background: #212e42; }
+.app-shell.polished-ui .sidebar .sidebar-capability strong { font-size: 12px; line-height: 18px; white-space: normal; }
+.app-shell.polished-ui .sidebar .sidebar-capability small { font-size: 10px; line-height: 16px; margin-top: 3px; }
+.app-shell.polished-ui .sidebar .sidebar-capability-icon { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 9px; }
+.app-shell.polished-ui .sidebar .sidebar-capability-icon svg { width: 20px; height: 20px; }
+.app-shell.polished-ui .sidebar .sidebar-flow-steps {
+  flex: 0 0 auto; margin: 4px 0 14px; padding: 0 4px 0 14px; gap: 6px;
+}
+.app-shell.polished-ui .sidebar .sidebar-flow-step {
+  min-height: 40px; padding: 9px 10px; gap: 10px;
+  font-size: 12px; line-height: 18px; color: #a8b5cb; text-align: left;
+}
+.app-shell.polished-ui .sidebar .sidebar-flow-step > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.app-shell.polished-ui .sidebar .sidebar-flow-step::before { left: -6px; background: #394860; }
+.app-shell.polished-ui .sidebar .sidebar-flow-step-dot { width: 20px; height: 20px; font-size: 11px; }
+.app-shell.polished-ui .sidebar .sidebar-flow-step.current { color: #fff; background: #29334b; }
+.app-shell.polished-ui .sidebar .sidebar-flow-step.done { color: #9ce0bf; }
+.app-shell.polished-ui .sidebar .sidebar-bottom { flex-shrink: 0; margin-top: auto; padding-top: 14px; }
+.app-shell.polished-ui .sidebar .engine-card { padding: 14px; border: 1px solid #2c394f; border-radius: 12px; background: #182334; box-shadow: 0 6px 18px #0000000d; }
+.app-shell.polished-ui .sidebar .engine-header { display: flex; align-items: center; gap: 8px; font-size: 11px; line-height: 18px; }
+.app-shell.polished-ui .sidebar .engine-connected { margin-left: auto; font-size: 10px; }
+.app-shell.polished-ui .sidebar .status-dot { width: 7px; height: 7px; flex-shrink: 0; }
+.app-shell.polished-ui .sidebar .engine-model { margin-top: 16px; text-align: left; }
+.engine-model label { display: block; margin-bottom: 7px; font-size: 9px; font-weight: 650; letter-spacing: 1px; color: #92a3bd; }
+.engine-select-wrap { position: relative; display: flex; align-items: center; }
+.engine-select-wrap select {
+  appearance: none; color-scheme: dark; width: 100%; min-width: 0; height: 39px;
+  padding: 0 28px 0 10px; border: 1px solid #394860; border-radius: 8px;
+  color: #e8ecf5; background: #202d42; font: inherit; font-size: 11px;
+  text-overflow: ellipsis; cursor: pointer; transition: border-color 140ms, box-shadow 140ms;
+}
+.engine-select-wrap select:hover { border-color: #667399; }
+.engine-select-wrap select:focus-visible { outline: 0; border-color: #a18bef; box-shadow: 0 0 0 3px #a18bef26; }
+.engine-select-wrap select:disabled { cursor: wait; opacity: .65; }
+.engine-select-wrap > svg { position: absolute; right: 9px; color: #a5b4ce; pointer-events: none; }
+.app-shell.polished-ui .sidebar .engine-region { display: flex; align-items: center; gap: 5px; margin-top: 10px; color: #98a9c3; font-size: 9px; line-height: 16px; }
+.engine-feedback { min-height: 26px; padding-top: 8px; color: #8596b2; font-size: 9px; line-height: 15px; text-align: left; }
+.engine-feedback.has-error { color: #ffb6c4; }
+.app-shell.polished-ui .main-content {
+  width: calc(100% - var(--shell-sidebar)); margin-left: var(--shell-sidebar); margin-right: 0;
+  height: 100dvh; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; background: #f6f8fc;
+  transition: none;
+}
+.app-shell.polished-ui .main-content .topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  box-sizing: border-box; height: 112px; min-height: 112px; padding: 18px var(--shell-gutter);
+  background: #fcfdff; border-bottom: 1px solid #e6eaf2; border-radius: 0;
+}
+.app-shell.polished-ui .main-content .topbar-left { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.app-shell.polished-ui .main-content .breadcrumb { margin: 0; font-size: 10px; line-height: 16px; letter-spacing: .6px; color: #7f8ba3; }
+.app-shell.polished-ui .main-content .topbar-heading-row { width: 100%; justify-content: flex-start; text-align: left; }
+.app-shell.polished-ui .main-content .topbar h1 { margin: 5px 0 4px; font-size: 24px; line-height: 30px; font-weight: 750; letter-spacing: -.6px; text-align: left; }
+.app-shell.polished-ui .main-content .topbar p { margin: 0; font-size: 12px; line-height: 18px; color: #74819b; text-align: left; }
+.app-shell.polished-ui .main-content .topbar-actions { position: static; align-self: center; margin: 0; flex-shrink: 0; }
+.app-shell.polished-ui .main-content .workspace { width: 100%; max-width: none; margin: 0; padding: 20px var(--shell-gutter) 24px; }
+.app-shell.polished-ui .main-content .li-page { padding: 20px var(--shell-gutter) 24px; }
+.app-shell.polished-ui .main-content .workspace-header { margin-bottom: 16px; }
+.app-shell.polished-ui .main-content .workspace-header > div:first-child { padding-left: 48px; text-align: left; }
+.app-shell.polished-ui .main-content .workspace-heading-icon { width: 34px; height: 34px; border-radius: 9px; }
+.app-shell.polished-ui .main-content .workspace-heading-icon svg { width: 20px; height: 20px; }
+.app-shell.polished-ui .main-content .workspace-header h2 { margin: 4px 0; font-size: 20px; line-height: 26px; }
+.app-shell.polished-ui .main-content .workspace-header p { margin: 0; font-size: 12px; line-height: 18px; }
+.app-shell.polished-ui .main-content :is(.workspace-header, .panel-header, .ci-card-header, .li-page, .output-title, .sdlc-section-header) { text-align: left; }
+.app-shell.polished-ui .main-content :is(.workspace-header, .ci-home, .li-page) :is(h2, h3, h4) { text-align: left; }
+.app-shell.polished-ui .main-content .example-prompts > span { text-align: left; justify-self: start; }
+.workspace-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.workspace-history-button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 7px 10px; border: 1px solid #dce2ed; border-radius: 8px; background: white; color: #61718e; font: inherit; font-size: 11px; white-space: nowrap; }
+.workspace-history-button:hover { border-color: #b8a5ec; color: #6b49c9; background: #faf8ff; }
+@media (min-width: 761px) { .app-shell.polished-ui { height: 100dvh; min-height: 0; } }
+@media (max-width: 760px) {
+  .app-shell.polished-ui { --shell-gutter: 16px; height: auto; }
+  .app-shell.polished-ui .sidebar { position: relative; width: 100%; padding: 16px; }
+  .app-shell.polished-ui .sidebar .sidebar-bottom { display: block; }
+  .app-shell.polished-ui .main-content { width: 100%; height: auto; margin: 0; overflow: visible; scrollbar-gutter: auto; }
+  .app-shell.polished-ui .main-content .topbar { height: auto; min-height: 112px; padding: 18px 16px; }
+  .app-shell.polished-ui .main-content .topbar h1 { font-size: 22px; line-height: 28px; }
+  .app-shell.polished-ui .main-content .topbar-actions { align-self: flex-start; }
+  .app-shell.polished-ui .main-content .workspace-header { flex-direction: column; }
+}

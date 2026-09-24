@@ -1,6 +1,8 @@
 import SdlcOutput from "./sdlcOutput";
 import ChangeImpactHome from "./ChangeImpactHome";
 import ChangeImpactResults from "./ChangeImpactResults";
+import LegacyCodeIntelligencePage from "./legacy-intelligence/LegacyCodeIntelligencePage";
+import { useLegacyAnalysis } from "./legacy-intelligence/useLegacyAnalysis";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   ArrowRight,
@@ -11,6 +13,7 @@ import {
   ChevronRight,
   ClipboardList,
   Trash2,
+  Plus,
   Code2,
   Download,
   Eye,
@@ -34,8 +37,9 @@ import {
   Check,
 } from "lucide-react";
 import "./App.css";
+import "./workspaceShell.css";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 const STAGE_SECTION_IDS: Record<string, number> = {
   requirement: 1,
@@ -72,9 +76,29 @@ const REQUIREMENT_FLOW_STEPS = [
   { label: "Documentation", stageIndex: 11 },
 ];
 
+// Sidebar progress list for Legacy Code Intelligence; step numbers match
+// `Analysis.progress.step` from the backend analysis pipeline.
+const LEGACY_FLOW_STEPS = [
+  { label: "Scan Repositories", step: 1 },
+  { label: "Discover Source Files", step: 2 },
+  { label: "Build Code Graph", step: 3 },
+  { label: "Analyze Architecture", step: 4 },
+  { label: "Trace Dependencies & Flows", step: 5 },
+  { label: "Discover APIs, Data & Rules", step: 6 },
+  { label: "AI Insight Synthesis", step: 7 },
+  { label: "Complete", step: 8 },
+];
+
 type Capability =
   | "requirement"
+  | "legacy-intelligence"
   | "change-impact";
+
+function capabilityFromHash(): Capability {
+  if (window.location.hash.startsWith("#/legacy-intelligence")) return "legacy-intelligence";
+  if (window.location.hash.startsWith("#/change-impact")) return "change-impact";
+  return "requirement";
+}
 
 interface AgentStage {
   name: string;
@@ -115,7 +139,14 @@ const MAX_HISTORY_ITEMS = 12;
 
 function App() {
   const [activeCapability, setActiveCapability] =
-    useState<Capability>("requirement");
+    useState<Capability>(capabilityFromHash);
+  const legacyAnalysisState = useLegacyAnalysis();
+
+  useEffect(() => {
+    const syncCapability = () => setActiveCapability(capabilityFromHash());
+    window.addEventListener("hashchange", syncCapability);
+    return () => window.removeEventListener("hashchange", syncCapability);
+  }, []);
 
   const [requirement, setRequirement] = useState("");
   const [changeRequest, setChangeRequest] = useState("");
@@ -130,6 +161,9 @@ function App() {
   const [backendOnline, setBackendOnline] = useState(false);
   const [models, setModels] = useState<{ id: string; label: string }[]>([]);
   const [activeModelId, setActiveModelId] = useState<string>("");
+  const [modelSaving, setModelSaving] = useState(false);
+  const [modelError, setModelError] = useState("");
+  const [engineRegion, setEngineRegion] = useState("eu-west-2");
   const outputPanelRef = useRef<HTMLElement>(null);
   const [interactiveStageIndex, setInteractiveStageIndex] = useState(0);
   const [activeStagesSequence, setActiveStagesSequence] = useState<string[]>([]);
@@ -149,7 +183,8 @@ function App() {
     // interactiveStages initialization order
     Object.keys(STAGE_SECTION_IDS).forEach((s) => {
       if (s === "assemble") return;
-      initial[s] = s !== "infrastructure" && s !== "documentation";
+      // Default: enable all sections except infrastructure
+      initial[s] = s !== "infrastructure";
     });
     return initial;
   });
@@ -290,7 +325,7 @@ function App() {
   
 
   useEffect(() => {
-    if (!result) {
+    if (!result || loading || error || activeCapability === "legacy-intelligence") {
       return;
     }
 
@@ -312,7 +347,7 @@ function App() {
         outputPanel.focus({ preventScroll: true });
       });
     });
-  }, [result]);
+  }, [result, loading, error, activeCapability]);
 
   const checkBackendHealth = async () => {
     try {
@@ -323,6 +358,7 @@ function App() {
       }
       const data = await response.json();
       setBackendOnline(data.status === "UP");
+      if (typeof data.region === "string") setEngineRegion(data.region);
     } catch {
       setBackendOnline(false);
     }
@@ -344,6 +380,7 @@ function App() {
   };
 
   const openHistoryItem = (item: RequirementHistoryItem) => {
+    window.location.hash = "/application-builder";
     setActiveCapability("requirement");
     setRequirement(item.requirement);
     setResult(item.result);
@@ -352,6 +389,16 @@ function App() {
     setApprovedSections([]);
     setError("");
     setHistoryOpen(false);
+  };
+
+  const deleteHistoryItem = (id: string) => {
+    const next = historyItems.filter((h) => h.id !== id);
+    setHistoryItems(next);
+    try {
+      localStorage.setItem(REQUIREMENT_HISTORY_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
   };
 
   const clearInput = () => {
@@ -505,6 +552,15 @@ function App() {
    */
 
   const capabilityConfig = {
+    "legacy-intelligence": {
+      title: "Legacy Code Intelligence",
+      subtitle: "Understand architecture, dependencies, business rules and hidden knowledge in existing applications.",
+      button: "Analyze Codebase",
+      inputLabel: "Repository URL",
+      placeholder: "https://github.com/your-org/legacy-system.git",
+      hint: "Connect one or more repositories to explore your codebase.",
+      icon: "",
+    },
     requirement: {
       title: "Application Builder",
       subtitle:
@@ -547,6 +603,8 @@ function App() {
 
       case "change-impact":
         return changeRequest;
+      case "legacy-intelligence":
+        return "";
     }
   };
 
@@ -677,6 +735,7 @@ function App() {
   const switchCapability = (
     capability: Capability
   ) => {
+    window.location.hash = capability === "requirement" ? "/application-builder" : `/${capability}`;
     setActiveCapability(capability);
     setResult("");
     setDiagramXml("");
@@ -693,8 +752,15 @@ function App() {
    * ----------------------------------------------------------
    */
 
+  const CHANGE_IMPACT_FLOW_STEPS = [
+    { label: "Describe change", step: 1 },
+    { label: "Analyze impact", step: 2 },
+    { label: "Review findings", step: 3 },
+    { label: "Complete", step: 4 },
+  ];
+
   const renderSidebar = () => (
-    <aside className={loading || result ? "sidebar sidebar-scrollable" : "sidebar"}>
+    <aside className={"sidebar sidebar-scrollable"}>
       <div className="brand">
         <div className="brand-icon">AI</div>
 
@@ -707,11 +773,6 @@ function App() {
       </div>
 
       <div className="sidebar-top-actions">
-        <button className="new-build-btn" onClick={() => { resetWorkspace(); setActiveCapability("requirement"); }}>
-          <span className="new-build-icon">+</span>
-          <span>New Build</span>
-        </button>
-
         <div className="sidebar-section-label">CAPABILITIES</div>
 
         <nav className="sidebar-capabilities">
@@ -732,34 +793,70 @@ function App() {
               <small>Full SDLC delivery</small>
             </span>
           </button>
-          {activeCapability === "requirement" && (loading || result) && (
-            <ul className="sidebar-flow-steps">
-              {REQUIREMENT_FLOW_STEPS.filter((step) => activeStagesSequence.includes(interactiveStages[step.stageIndex])).map((step) => {
-                const stageName = interactiveStages[step.stageIndex];
-                const pos = activeStagesSequence.indexOf(stageName);
+        {activeCapability === "requirement" && !error && (loading || !!result) && interactiveStageIndex < activeStagesSequence.length && (
+          <ul className="sidebar-flow-steps">
+            {REQUIREMENT_FLOW_STEPS.filter((step) => activeStagesSequence.includes(interactiveStages[step.stageIndex])).map((step) => {
+              const stageName = interactiveStages[step.stageIndex];
+              const pos = activeStagesSequence.indexOf(stageName);
 
-                let status: string;
-                if (interactiveStageIndex >= activeStagesSequence.length) {
-                  status = "done";
-                } else if (pos === -1) {
-                  status = "pending";
-                } else if (pos < interactiveStageIndex) {
-                  status = "done";
-                } else if (pos === interactiveStageIndex) {
-                  status = "current";
-                } else {
-                  status = "pending";
-                }
+              let status: string;
+              if (interactiveStageIndex >= activeStagesSequence.length) {
+                status = "done";
+              } else if (pos === -1) {
+                status = "pending";
+              } else if (pos < interactiveStageIndex) {
+                status = "done";
+              } else if (pos === interactiveStageIndex) {
+                status = "current";
+              } else {
+                status = "pending";
+              }
 
-                return (
-                  <li className={`sidebar-flow-step ${status}`} key={step.label}>
-                    <span className="sidebar-flow-step-dot">{status === "done" ? "✓" : ""}</span>
-                    <span>{step.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+              return (
+                <li className={`sidebar-flow-step ${status}`} key={step.label}>
+                  <span className="sidebar-flow-step-dot">{status === "done" ? "✓" : ""}</span>
+                  <span>{step.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+
+
+          <button
+            className={`sidebar-capability legacy${activeCapability === "legacy-intelligence" ? " active" : ""}`}
+            onClick={() => switchCapability("legacy-intelligence")}
+            aria-current={activeCapability === "legacy-intelligence" ? "page" : undefined}
+          >
+            <span className="sidebar-capability-icon impact"><Code2 /></span>
+            <span>
+              <strong>Legacy Code Intelligence</strong>
+              <small>Understand &amp; document legacy systems</small>
+            </span>
+          </button>
+        {activeCapability === "legacy-intelligence" && (legacyAnalysisState.starting || ["SCANNING", "INDEXING", "ANALYZING"].includes(legacyAnalysisState.analysis?.status || "")) && (
+          <ul className="sidebar-flow-steps">
+            {LEGACY_FLOW_STEPS.map((item) => {
+              const analysis = legacyAnalysisState.analysis;
+              const currentStep = analysis?.progress?.step ?? 0;
+              let status: string;
+              if (analysis?.status === "COMPLETED") status = "done";
+              else if (item.step < currentStep || (analysis?.status === "FAILED" && item.step <= currentStep)) status = "done";
+              else if (item.step === currentStep && analysis?.status !== "FAILED") status = "current";
+              else status = "pending";
+
+              return (
+                <li className={`sidebar-flow-step ${status}`} key={item.label}>
+                  <span className="sidebar-flow-step-dot">{status === "done" ? "✓" : ""}</span>
+                  <span>{item.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+
 
           <button
             className={
@@ -778,21 +875,25 @@ function App() {
               <small>Dependencies & risks</small>
             </span>
           </button>
+        {activeCapability === "change-impact" && loading && (
+          <ul className="sidebar-flow-steps">
+            {CHANGE_IMPACT_FLOW_STEPS.map((item, idx) => {
+              // derive a simple status: current when loading or when result available
+              let status = "pending";
+              if (loading) status = idx === 1 ? "current" : "pending";
+              else if (result) status = idx < 3 ? "done" : "current";
+              return (
+                <li className={`sidebar-flow-step ${status}`} key={item.label}>
+                  <span className="sidebar-flow-step-dot">{status === "done" ? "✓" : ""}</span>
+                  <span>{item.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
         </nav>
       </div>
-
-      <nav className="sidebar-links">
-        <button className="sidebar-capability" onClick={() => setHistoryOpen(true)}>
-          <span className="sidebar-capability-icon history">
-            <History />
-          </span>
-
-          <span>
-            <strong>History</strong>
-            <small>Recent analyses</small>
-          </span>
-        </button>
-      </nav>
 
       <div className="sidebar-bottom">
         <div className="engine-card">
@@ -815,34 +916,48 @@ function App() {
           </div>
 
           <div className="engine-model">
-            <label style={{display: 'block', fontWeight: 700, fontSize: 12, marginBottom: 6}}>Model</label>
+            <label htmlFor="engine-model-select">MODEL</label>
+            <div className="engine-select-wrap">
             <select
+              id="engine-model-select"
               value={activeModelId}
+              disabled={modelSaving || !models.length}
+              title={models.find((model) => model.id === activeModelId)?.label || "Select AI model"}
               onChange={async (e) => {
                 const id = e.target.value;
+                const previous = activeModelId;
+                setModelSaving(true);
+                setModelError("");
                 setActiveModelId(id);
                 try {
-                  await fetch(`${API_BASE_URL}/model`, {
+                  const response = await fetch(`${API_BASE_URL}/model`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ model_id: id })
                   });
+                  const data = await response.json();
+                  if (!response.ok || data.success === false) throw new Error("Could not change model");
                 } catch {
-                  // ignore
+                  setActiveModelId(previous);
+                  setModelError("Unable to change model. Try again.");
+                } finally {
+                  setModelSaving(false);
                 }
               }}
-              style={{width: '100%'}}
             >
               <option value="">Select model...</option>
               {models.map((m) => (
                 <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </select>
+            <ChevronDown size={15} aria-hidden="true" />
+            </div>
           </div>
 
           <div className="engine-region">
-            {activeModelId.includes('nova') ? 'AWS eu-west-2' : 'Claude'}
+            <Cloud size={13} aria-hidden="true" /> Amazon Bedrock <span>·</span> {engineRegion}
           </div>
+          <div className={`engine-feedback${modelError ? " has-error" : ""}`} role="status">{modelError || (modelSaving ? "Updating model…" : "Shared across all capabilities")}</div>
         </div>
 
       </div>
@@ -988,7 +1103,7 @@ function App() {
   };
 
   return (
-    <div className={`app-shell polished-ui ${activeCapability === "change-impact" ? "change-impact-app" : ""}`}>
+    <div className={`app-shell polished-ui ${activeCapability === "change-impact" ? "change-impact-app" : activeCapability === "legacy-intelligence" ? "legacy-intelligence-app" : ""}`}>
       {renderSidebar()}
 
       <main className={`${result ? "main-content has-results" : !loading ? "main-content home-screen" : "main-content"}${buildSettingsOpen ? " settings-open" : ""}`}>
@@ -997,12 +1112,12 @@ function App() {
             <div className="breadcrumb">
               WORKSPACE
               <span>/</span>
-              {activeCapability === "change-impact" ? "CHANGE IMPACT" : "APPLICATION BUILDER"}
+              {activeCapability === "legacy-intelligence" ? "LEGACY CODE INTELLIGENCE" : activeCapability === "change-impact" ? "CHANGE IMPACT" : "APPLICATION BUILDER"}
             </div>
             <div className="topbar-heading-row">
               <div>
-                <h1>{activeCapability === "change-impact" ? "Change intelligence" : "Build your next application"}</h1>
-                <p>{activeCapability === "change-impact" ? "Trace downstream dependencies before the first line of code changes." : "From business intent to a developer-ready implementation pack."}</p>
+                <h1>{activeCapability === "legacy-intelligence" ? current.title : activeCapability === "change-impact" ? "Change intelligence" : "Build your next application"}</h1>
+                <p>{activeCapability === "legacy-intelligence" ? current.subtitle : activeCapability === "change-impact" ? "Trace downstream dependencies before the first line of code changes." : "From business intent to a developer-ready implementation pack."}</p>
               </div>
               
             </div>
@@ -1048,7 +1163,8 @@ function App() {
                       <span>{new Date(item.createdAt).toLocaleString()}</span>
                     </div>
                     <div className="history-item-actions">
-                      <button type="button" onClick={() => openHistoryItem(item)}>Open</button>
+                        <button type="button" onClick={() => openHistoryItem(item)}>Open</button>
+                        <button type="button" onClick={() => deleteHistoryItem(item.id)} aria-label="Delete history">Delete</button>
                     </div>
                   </article>
                 )) : (
@@ -1109,6 +1225,9 @@ function App() {
           </div>
         )}
 
+        {activeCapability === "legacy-intelligence" ? (
+          <LegacyCodeIntelligencePage state={legacyAnalysisState} onChangeImpact={() => switchCapability("change-impact")} />
+        ) : (
         <section className={`${!result && !loading ? "workspace home-workspace" : "workspace"} ${activeCapability === "change-impact" ? "change-impact-workspace" : ""}`}>
           <div className="workspace-header">
             <div>
@@ -1127,22 +1246,27 @@ function App() {
               <span>Describe clearly for better results</span>
             </div>
 
-            {!result && !loading && (
+            {activeCapability === "requirement" && !result && !loading && (
               <div className="workspace-metrics" aria-label="Workspace capabilities">
                 <span><strong>12</strong> delivery stages</span>
                 <span><strong>AI</strong> guided review</span>
               </div>
             )}
 
+            <div className="workspace-actions">
+            {activeCapability === "requirement" && <button type="button" className="workspace-history-button" onClick={() => setHistoryOpen(true)}>
+              <History size={15} /> Build history
+            </button>}
             <button
               className="clear-btn"
               onClick={resetWorkspace}
               title="Start new analysis (clear workspace)"
               aria-label="Start new analysis"
             >
-              <Trash2 className="clear-icon" aria-hidden="true" />
+              <Plus className="clear-icon" aria-hidden="true" />
               New Analysis
             </button>
+            </div>
           </div>
 
           {renderAnalysisStatus()}
@@ -1181,6 +1305,7 @@ function App() {
                   value={getInputValue()}
                   onChange={(event) => setInputValue(event.target.value)}
                   placeholder={current.placeholder}
+                  aria-label={current.inputLabel}
                   spellCheck={activeCapability === "requirement"}
                   className="requirement-editor"
                 />
@@ -1716,6 +1841,7 @@ function App() {
             </div>
           </div>
         </section>
+        )}
       </main>
     </div>
   );

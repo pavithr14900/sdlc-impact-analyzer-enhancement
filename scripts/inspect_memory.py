@@ -40,7 +40,7 @@ async def main():
             await session.initialize()
             result = await session.list_tools()
             for tool in result.tools:
-                if tool.name in {'index_repository', 'list_projects', 'search_graph', 'search_code', 'trace_call_path', 'trace_path', 'get_architecture', 'get_code_snippet', 'check_index_coverage'}:
+                if '--all' in sys.argv or tool.name in {'index_repository', 'list_projects', 'search_graph', 'search_code', 'trace_call_path', 'trace_path', 'get_architecture', 'get_code_snippet', 'check_index_coverage'}:
                     print(json.dumps({'name': tool.name, 'schema': tool.inputSchema}))
 
 

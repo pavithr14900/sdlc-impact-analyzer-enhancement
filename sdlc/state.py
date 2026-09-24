@@ -53,6 +53,24 @@ class ChangeImpactState(TypedDict, total=False):
     trace: Annotated[list[AgentTrace], operator.add]
 
 
+class LegacyIntelligenceState(TypedDict, total=False):
+    """Shared state for the Legacy Code Intelligence insight synthesis graph."""
+
+    context: str
+
+    architecture_narrative: str
+    business_rules_narrative: str
+    flows_narrative: str
+    dependencies_narrative: str
+    security_narrative: str
+    tech_debt_narrative: str
+
+    report: dict | None
+    document: str
+
+    trace: Annotated[list[AgentTrace], operator.add]
+
+
 def traced(
     name: str,
     role: str,

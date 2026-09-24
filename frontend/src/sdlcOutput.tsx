@@ -57,11 +57,6 @@ interface SdlcOutputProps {
   activeSectionLabel?: string;
 }
 
-// Once the implementation pack is fully generated, these sections (already
-// rendered, no backend call needed) get a plain "Next" button to page
-// through them instead of the backend-driven approve/correction flow.
-const AUTO_NAV_SECTION_IDS = new Set([7, 8, 9, 10, 11, 12]);
-
 const SECTION_ICONS: Record<number, string> = {
   1: "◇",
   2: "◎",
@@ -121,8 +116,7 @@ function parseSections(content: string): SdlcSection[] {
       },
     ];
   }
-
-  return matches.map((match, index) => {
+  const rawSections: SdlcSection[] = matches.map((match, index) => {
     const id = Number(match[1]);
 
     const title = match[2]
@@ -130,32 +124,30 @@ function parseSections(content: string): SdlcSection[] {
       .trim()
       .replace(/\*+/g, "");
 
-    const start =
-      (match.index ?? 0) + match[0].length;
+    const start = (match.index ?? 0) + match[0].length;
 
-    const end =
-      index + 1 < matches.length
-        ? matches[index + 1].index ?? normalized.length
-        : normalized.length;
+    const end = index + 1 < matches.length ? matches[index + 1].index ?? normalized.length : normalized.length;
 
-    let sectionContent = normalized
-      .substring(start, end)
-      .trim();
+    let sectionContent = normalized.substring(start, end).trim();
 
-    /*
-     * Remove decorative separator lines.
-     */
-    sectionContent = sectionContent
-      .replace(/^\s*=+\s*$/gm, "")
-      .replace(/^\s*-{5,}\s*$/gm, "")
-      .trim();
+    // Remove decorative separator lines.
+    sectionContent = sectionContent.replace(/^\s*=+\s*$/gm, "").replace(/^\s*-{5,}\s*$/gm, "").trim();
 
-    return {
-      id,
-      title,
-      content: sectionContent,
-    };
+    return { id, title, content: sectionContent };
   });
+
+  // De-duplicate by normalized title, keeping the first occurrence.
+  const seen = new Set<string>();
+  const sections: SdlcSection[] = [];
+  for (const sec of rawSections) {
+    const norm = sec.title.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      sections.push(sec);
+    }
+  }
+
+  return sections;
 }
 
 function parseSummaryRows(content: string) {
